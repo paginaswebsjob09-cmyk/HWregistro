@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AromaPOS - Control de Ventas & Cierres Diarios</title>
+    <!-- Google Fonts & FontAwesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- AUTENTICACIÓN -->
+    <div class="auth-overlay" id="authScreen">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <div class="brand-icon"><i class="fa-solid fa-mug-hot"></i></div>
+                <h2>AromaPOS</h2>
+                <p>Gestión de Ventas & Historial Deslizable</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tabLoginBtn" onclick="switchAuthTab('login')">Iniciar Sesión</button>
+                <button class="auth-tab" id="tabRegisterBtn" onclick="switchAuthTab('register')">Registrarse</button>
+            </div>
+
+            <!-- Login -->
+            <form id="loginForm" class="auth-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label><i class="fa-solid fa-envelope"></i> Correo Electrónico</label>
+                    <input type="email" id="loginEmail" required placeholder="tu@correo.com">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-lock"></i> Contraseña</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn-primary w-100">
+                    <i class="fa-solid fa-right-to-bracket"></i> Entrar al Sistema
+                </button>
+            </form>
+
+            <!-- Registro -->
+            <form id="registerForm" class="auth-form hidden" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label><i class="fa-solid fa-user"></i> Nombre / Negocio</label>
+                    <input type="text" id="regName" required placeholder="Ej. Café & Deli Aurora">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-envelope"></i> Correo Electrónico</label>
+                    <input type="email" id="regEmail" required placeholder="tu@correo.com">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-lock"></i> Contraseña</label>
+                    <input type="password" id="regPassword" required placeholder="Mínimo 6 caracteres">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-image"></i> Foto de Perfil</label>
+                    <input type="file" id="regAvatarFile" accept="image/*" onchange="previewAvatar(event)">
+                    <div class="avatar-preview-box" id="avatarPreviewContainer" style="display:none;">
+                        <img id="avatarPreviewImg" src="" alt="Vista previa">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary w-100">
+                    <i class="fa-solid fa-user-plus"></i> Crear Cuenta
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APP PRINCIPAL -->
+    <div class="app-layout" id="mainApp" style="display:none;">
+        
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-mini">
+                    <i class="fa-solid fa-mug-hot"></i>
+                    <span>AromaPOS</span>
+                </div>
+            </div>
+
+            <!-- Perfil del usuario (clicable para editar) -->
+            <div class="user-profile-badge" onclick="openProfileModal()" title="Haz clic para editar tu perfil">
+                <div class="avatar-wrap">
+                    <img id="userAvatarImg" src="" alt="Avatar">
+                </div>
+                <div class="user-info">
+                    <h4 id="userNameDisplay">Usuario</h4>
+                    <span class="user-status"><i class="fa-solid fa-circle"></i> En Servicio</span>
+                </div>
+                <button class="btn-edit-profile-icon" title="Editar Perfil">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+            </div>
+
+            <nav class="side-nav">
+                <button class="nav-btn active" id="nav-sales" onclick="switchView('sales')">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span>Ventas del Día</span>
+                </button>
+                <button class="nav-btn" id="nav-products" onclick="switchView('products')">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    <span>Productos</span>
+                </button>
+                <button class="nav-btn" id="nav-history" onclick="switchView('history')">
+                    <i class="fa-solid fa-arrows-left-right"></i>
+                    <span>Historial Completo ↔</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <!-- Botón de Modo Oscuro / Claro -->
+                <button class="theme-toggle-btn" onclick="toggleTheme()" id="themeToggleBtn">
+                    <i class="fa-solid fa-moon" id="themeIcon"></i>
+                    <span id="themeText">Modo Oscuro</span>
+                </button>
+
+                <button class="btn-logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar Sesión
+                </button>
+            </div>
+        </aside>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="main-content">
+
+            <!-- BARRA DE ESTADO DE HOY -->
+            <div class="day-status-bar">
+                <div class="day-status-info">
+                    <span class="pulse-indicator"></span>
+                    <div>
+                        <small>JORNADA ACTIVA EN CURSO</small>
+                        <h4 id="liveDateDisplay">Hoy</h4>
+                    </div>
+                </div>
+
+                <div class="day-metrics-pill">
+                    <div class="metric-item">
+                        <span>Ventas acumuladas:</span>
+                        <strong id="liveSalesCount">0</strong>
+                    </div>
+                    <div class="metric-divider"></div>
+                    <div class="metric-item">
+                        <span>Total acumulado hoy:</span>
+                        <strong id="liveTotalRevenue">$0.00</strong>
+                    </div>
+                </div>
+
+                <button class="btn-close-day" onclick="openDailyClosurePrompt()">
+                    <i class="fa-solid fa-flag-checkered"></i> FINALIZAR DÍA & CUADRE
+                </button>
+            </div>
+
+            <!-- VISTA 1: REGISTRAR VENTAS DE HOY -->
+            <section id="view-sales" class="app-view active">
+                <div class="pos-layout">
+                    
+                    <div class="pos-catalog">
+                        <div class="catalog-top">
+                            <div class="search-box">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="searchProductInput" placeholder="Buscar por nombre o categoría..." oninput="filterProducts()">
+                            </div>
+                            <button class="btn-secondary" onclick="openProductModal()">
+                                <i class="fa-solid fa-plus"></i> Añadir Producto
+                            </button>
+                        </div>
+
+                        <div class="category-filters">
+                            <button class="cat-pill active" onclick="filterCategory('todos', this)">Todos</button>
+                            <button class="cat-pill" onclick="filterCategory('Bebidas', this)">Bebidas</button>
+                            <button class="cat-pill" onclick="filterCategory('Comidas', this)">Comidas</button>
+                            <button class="cat-pill" onclick="filterCategory('Postres', this)">Postres</button>
+                            <button class="cat-pill" onclick="filterCategory('Otros', this)">Otros</button>
+                        </div>
+
+                        <div class="products-grid" id="posProductsGrid"></div>
+                    </div>
+
+                    <!-- Panel de venta -->
+                    <div class="pos-ticket-panel">
+                        <div class="ticket-header">
+                            <div class="ticket-title">
+                                <h3><i class="fa-solid fa-file-invoice-dollar"></i> Venta Actual</h3>
+                            </div>
+                            <button class="btn-clear-cart" onclick="clearCart()" title="Limpiar lista">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+
+                        <div class="ticket-items" id="ticketItemsContainer">
+                            <div class="cart-empty-state">
+                                <i class="fa-solid fa-basket-shopping"></i>
+                                <p>Selecciona los productos para sumarlos al día</p>
+                            </div>
+                        </div>
+
+                        <div class="ticket-summary">
+                            <div class="summary-row total-row">
+                                <span>TOTAL VENTA</span>
+                                <span id="summaryTotal">$0.00</span>
+                            </div>
+
+                            <div class="payment-method-selector">
+                                <label>Forma de pago de esta venta:</label>
+                                <div class="payment-options">
+                                    <label class="pay-option active">
+                                        <input type="radio" name="payMethod" value="Efectivo" checked>
+                                        <i class="fa-solid fa-money-bill-wave"></i> Efectivo
+                                    </label>
+                                    <label class="pay-option">
+                                        <input type="radio" name="payMethod" value="Tarjeta">
+                                        <i class="fa-solid fa-credit-card"></i> Tarjeta
+                                    </label>
+                                    <label class="pay-option">
+                                        <input type="radio" name="payMethod" value="Transferencia">
+                                        <i class="fa-solid fa-mobile-screen"></i> Transf.
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button class="btn-finalize" onclick="recordSingleSale()">
+                                <i class="fa-solid fa-plus-circle"></i> REGISTRAR Y ACUMULAR VENTA
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- VISTA 2: PRODUCTOS -->
+            <section id="view-products" class="app-view">
+                <div class="view-header">
+                    <div>
+                        <h2>Inventario de Productos</h2>
+                        <p>Catálogo completo con fotos y precios.</p>
+                    </div>
+                    <button class="btn-primary" onclick="openProductModal()">
+                        <i class="fa-solid fa-plus"></i> Nuevo Producto
+                    </button>
+                </div>
+
+                <div class="inventory-table-wrap horizontal-scroll-table">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Foto</th>
+                                <th>Producto</th>
+                                <th>Categoría</th>
+                                <th>Precio</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- VISTA 3: HISTORIAL COMPLETO DESLIZABLE -->
+            <section id="view-history" class="app-view">
+                <div class="view-header">
+                    <div>
+                        <h2>Historial Completo de Cierres Diarios</h2>
+                        <p>Desliza hacia los lados <i class="fa-solid fa-arrows-left-right gold-text"></i> para navegar por todos los días cerrados.</p>
+                    </div>
+                    <div class="slider-controls">
+                        <button class="slider-arrow-btn" onclick="slideHistoryCarousel(-1)" title="Anterior">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <button class="slider-arrow-btn" onclick="slideHistoryCarousel(1)" title="Siguiente">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CONTENEDOR DESLIZABLE HORIZONTALMENTE -->
+                <div class="history-slider-wrapper">
+                    <div class="history-cards-track" id="historyCardsTrack"></div>
+                </div>
+
+                <!-- TABLA CON DETALLES -->
+                <div class="history-detail-section">
+                    <div class="view-header" style="margin-top: 35px; margin-bottom: 15px;">
+                        <div>
+                            <h3>Detalle de Transacciones Registradas</h3>
+                            <p>Desplaza horizontalmente para ver todos los métodos y detalles de cada día.</p>
+                        </div>
+                    </div>
+                    <div class="inventory-table-wrap horizontal-scroll-table">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Cierre #</th>
+                                    <th>Fecha & Hora</th>
+                                    <th>Cajero/a</th>
+                                    <th>Total Ventas</th>
+                                    <th>Efectivo</th>
+                                    <th>Tarjeta</th>
+                                    <th>Transferencia</th>
+                                    <th>TOTAL DEL DÍA</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyClosuresTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODAL: EDITAR PERFIL -->
+    <div class="modal-backdrop" id="profileModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-user-pen"></i> Modificar Perfil</h3>
+                <button class="btn-close-modal" onclick="closeProfileModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleSaveProfile(event)" class="modal-form">
+                <div class="form-group">
+                    <label>Nombre / Negocio</label>
+                    <input type="text" id="editProfileName" required placeholder="Nombre de tu negocio o usuario">
+                </div>
+                <div class="form-group">
+                    <label>Actualizar Foto de Perfil</label>
+                    <input type="file" id="editProfileAvatarFile" accept="image/*" onchange="previewEditAvatar(event)">
+                    <div class="avatar-preview-box" id="editAvatarPreviewContainer" style="margin-top: 10px;">
+                        <img id="editAvatarPreviewImg" src="" alt="Vista previa">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeProfileModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: NUEVO PRODUCTO -->
+    <div class="modal-backdrop" id="productModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-tag"></i> Añadir Producto</h3>
+                <button class="btn-close-modal" onclick="closeProductModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleSaveProduct(event)" class="modal-form">
+                <div class="form-group">
+                    <label>Nombre del Producto</label>
+                    <input type="text" id="prodName" required placeholder="Ej. Cappuccino Vainilla">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Precio ($)</label>
+                        <input type="number" step="0.01" id="prodPrice" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría</label>
+                        <select id="prodCategory">
+                            <option value="Bebidas">Bebidas</option>
+                            <option value="Comidas">Comidas</option>
+                            <option value="Postres">Postres</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Foto del Producto</label>
+                    <input type="file" id="prodImageFile" accept="image/*" onchange="previewProductImg(event)">
+                    <div class="img-preview-box" id="productImgPreviewBox" style="display:none;">
+                        <img id="productPreviewImg" src="" alt="Vista previa">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeProductModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: COMPROBANTE DE CIERRE DIARIO -->
+    <div class="modal-backdrop" id="dailyReportModal">
+        <div class="modal-box receipt-box">
+            <div class="receipt-paper" id="printableDailyReport">
+                <div class="receipt-top text-center">
+                    <i class="fa-solid fa-mug-saucer receipt-logo"></i>
+                    <h2 id="repBusinessName">AromaPOS</h2>
+                    <p class="bold-text">COMPROBANTE DE CIERRE DIARIO</p>
+                    <p id="repDate">Fecha: --/--/----</p>
+                    <p id="repClosedBy">Responsable: --</p>
+                </div>
+                <div class="receipt-divider">================================</div>
+                <div class="rcpt-row"><span>Ventas procesadas:</span><strong id="repSalesCount">0</strong></div>
+                <div class="rcpt-row"><span>En Efectivo:</span><span id="repCashTotal">$0.00</span></div>
+                <div class="rcpt-row"><span>En Tarjeta:</span><span id="repCardTotal">$0.00</span></div>
+                <div class="rcpt-row"><span>En Transferencia:</span><span id="repTransfTotal">$0.00</span></div>
+                <div class="receipt-divider">================================</div>
+                <div class="rcpt-row bold-total">
+                    <span>GRAN TOTAL DEL DÍA:</span>
+                    <span id="repGrandTotal">$0.00</span>
+                </div>
+                <div class="receipt-divider">--------------------------------</div>
+                <p class="text-center" style="font-size:11px;">Detalle de artículos vendidos:</p>
+                <div class="receipt-items-list" id="repProductsBreakdown"></div>
+                <div class="receipt-footer text-center">
+                    <p>*** JORNADA FINALIZADA CON ÉXITO ***</p>
+                    <p class="barcode">||| |||| | ||||| || ||||</p>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeDailyReportModal()">Cerrar</button>
+                <button class="btn-primary" onclick="window.print()"><i class="fa-solid fa-print"></i> Imprimir Comprobante</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SDKs de Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <!-- Script principal -->
+    <script src="script.js"></script>
+</body>
+</html>
